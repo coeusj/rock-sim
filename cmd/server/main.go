@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/coeusj/rock-sim/internal/simulator"
+	"github.com/coeusj/rock-sim/pkg/logger"
 )
 
 func main() {
@@ -23,15 +22,7 @@ func main() {
 	}
 
 	var writerWg sync.WaitGroup
-	writeErr := telemetryWriter.WriteMessage(context.Background(), &rocketTelemetry)
-	if writeErr != nil {
-		log.Fatal("Could not write message:", writeErr)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Telemetry sent at: %v\n", time.Now())
-
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 10000; i++ {
 		rocketTelemetry.Altitude += 15.2
 		rocketTelemetry.Velocity += 5.5
 
@@ -40,17 +31,17 @@ func main() {
 		go func() {
 			defer writerWg.Done()
 
-			writeErr = telemetryWriter.WriteMessage(context.Background(), &rocketTelemetry)
+			writeErr := telemetryWriter.WriteMessage(context.Background(), &rocketTelemetry)
 			if writeErr != nil {
 				log.Fatal("Could not write message:", writeErr)
 			}
 
-			fmt.Printf("Telemetry sent at: %v\n", time.Now())
+			log.Printf("Telemetry sent at: %v\n", logger.DateTimeWithNanoseconds(time.Now()))
 		}()
 
-		// time.Sleep(time.Second / 10000)
+		time.Sleep(time.Second / 100)
 	}
 
 	writerWg.Wait()
-	fmt.Println("Done")
+	log.Println("Done")
 }
