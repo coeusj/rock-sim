@@ -1,47 +1,50 @@
 package main
 
 import (
-	"context"
-	"log"
+	"os"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/coeusj/rock-sim/internal/simulator"
-	"github.com/coeusj/rock-sim/pkg/logger"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	telemetryWriter := simulator.NewRocketTelemetryWriter()
+	godotenv.Load("../../test_kafka.env")
 
-	defer telemetryWriter.Writer.Close()
+	brokers := strings.Split(os.Getenv("KAFKA_URL"), ",")
+	wg := &sync.WaitGroup{}
 
-	rocketTelemetry := simulator.RocketTelemetry{
-		RocketID: "Electron-Beta",
-		Velocity: 7500.2,
-		Altitude: 150000.5,
+	navigationSim, err := simulator.NewSimulator[string, simulator.Navigation](brokers, "navigation")
+	if err == nil {
+		navigationSim.Update = func() {
+			navigationSim.Value.Altitude += 10.3
+			navigationSim.Value.Velocity += 2.5
+		}
+
+		navigationSim.StartSimulation(wg, "Electron-Beta", simulator.Navigation{
+			Key:      "Electron-Beta",
+			Velocity: 7500.2,
+			Altitude: 150000.5,
+			Pitch:    90.0,
+			Yaw:      0.0,
+			Roll:     0.0,
+		})
 	}
 
-	var writerWg sync.WaitGroup
-	for i := 0; i < 10000; i++ {
-		rocketTelemetry.Altitude += 15.2
-		rocketTelemetry.Velocity += 5.5
+	propulsionSim, err := simulator.NewSimulator[string, simulator.Propulsion](brokers, "propulsion")
+	if err == nil {
+		propulsionSim.Update = func() {
+			propulsionSim.Value.FuelPerc -= 0.003
+		}
 
-		writerWg.Add(1)
-
-		go func() {
-			defer writerWg.Done()
-
-			writeErr := telemetryWriter.WriteMessage(context.Background(), &rocketTelemetry)
-			if writeErr != nil {
-				log.Fatal("Could not write message:", writeErr)
-			}
-
-			log.Printf("Telemetry sent at: %v\n", logger.DateTimeWithNanoseconds(time.Now()))
-		}()
-
-		time.Sleep(time.Second / 100)
+		propulsionSim.StartSimulation(wg, "Electron-Beta", simulator.Propulsion{
+			Key:      "Electron-Beta",
+			FuelPerc: 100.00,
+		})
 	}
 
-	writerWg.Wait()
-	log.Println("Done")
+	wg.Wait()
+	navigationSim.Dispose()
+	propulsionSim.Dispose()
 }
