@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/coeusj/rock-sim/internal/simulator"
 	"github.com/coeusj/rock-sim/pkg/utils"
@@ -36,7 +35,7 @@ func main() {
 	brokers := strings.Split(brokersStr, ",")
 
 	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Setup signal handling for graceful shutdown

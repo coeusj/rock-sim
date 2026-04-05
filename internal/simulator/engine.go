@@ -40,10 +40,10 @@ func (e *Engine[K, V]) StartSimulation(ctx context.Context, wg *sync.WaitGroup, 
 		defer wg.Done()
 
 		currentValue := initialValue
-		ticker := time.NewTicker(100 * time.Millisecond)
+		ticker := time.NewTicker(time.Millisecond * 100)
 		defer ticker.Stop()
 
-		for i := 0; i < 30; i++ {
+		for i := 0; i < 500; i++ {
 			select {
 			case <-ctx.Done():
 				e.logger.Info("simulation cancelled", "reason", ctx.Err(), "iterations_completed", i)
