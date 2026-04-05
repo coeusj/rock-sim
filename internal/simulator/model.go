@@ -1,18 +1,5 @@
 package simulator
 
-// TODO: this should probably inside pkg, as it is use as a DTO by the producer and the consumer
-type RocketTelemetry struct {
-	RocketID string  `json:"rocket_id"`
-	Velocity float64 `json:"velocity"`
-	Altitude float64 `json:"altitude"`
-	Pitch    float64 `json:"pitch"`
-	Yaw      float64 `json:"yaw"`
-	Roll     float64 `json:"roll"`
-	FuelPerc float64 `json:"fuel_perc"`
-	BatPerc  float64 `json:"bat_perc"`
-	CPUPerc  float64 `json:"cpu_perc"`
-}
-
 type Propulsion struct {
 	Key      string  `json:"key"`
 	FuelPerc float64 `json:"fuel_perc"`

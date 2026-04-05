@@ -5,7 +5,6 @@ go 1.25.5
 require (
 	github.com/IBM/sarama v1.47.0
 	github.com/joho/godotenv v1.5.1
-	github.com/segmentio/kafka-go v0.4.50
 )
 
 require (

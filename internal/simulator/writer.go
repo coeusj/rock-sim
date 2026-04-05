@@ -4,58 +4,102 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
+	"fmt"
+	"log/slog"
 	"strings"
 
-	"github.com/joho/godotenv"
-	"github.com/segmentio/kafka-go"
+	"github.com/IBM/sarama"
 )
 
-type RocketTelemetryWriter struct {
-	Writer *kafka.Writer
+type Sender[K any, V any] interface {
+	Send(key K, value V) error
+	Close() error
 }
 
-func NewRocketTelemetryWriter(brokers []string, topicName string) (*RocketTelemetryWriter, error) {
-	godotenv.Load("../../test_kafka.env")
+type Writer[K any, V any] struct {
+	sender Sender[K, V]
+}
 
+// NewWriter creates a new telemetry writer
+func NewWriter[K any, V any](s Sender[K, V]) *Writer[K, V] {
+	return &Writer[K, V]{sender: s}
+}
+
+// Write sends telemetry data with context support for cancellation
+func (w *Writer[K, V]) Write(ctx context.Context, key K, value V) error {
+	// Check if context is cancelled before sending
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	return w.sender.Send(key, value)
+}
+
+type KafkaSender[K any, V any] struct {
+	producer sarama.SyncProducer
+	topic    string
+	logger   *slog.Logger
+}
+
+func NewKafkaSender[K any, V any](brokers []string, topic string, logger *slog.Logger) (*KafkaSender[K, V], error) {
 	if len(brokers) <= 0 {
-		return nil, errors.New("Brokers not provided")
+		return nil, errors.New("brokers not provided")
 	}
 
-	if len(strings.TrimSpace(topicName)) <= 0 {
-		return nil, errors.New("Topic not provided")
+	if len(strings.TrimSpace(topic)) <= 0 {
+		return nil, errors.New("topic not provided")
 	}
 
-	writer := &kafka.Writer{
-		Addr:                   kafka.TCP(os.Getenv("KAFKA_URL")),
-		Topic:                  topicName,
-		Balancer:               &kafka.ReferenceHash{},
-		Async:                  false,
-		AllowAutoTopicCreation: true,
-		RequiredAcks:           kafka.RequireAll,
+	if logger == nil {
+		logger = slog.Default()
 	}
 
-	return &RocketTelemetryWriter{
-		Writer: writer,
+	config := sarama.NewConfig()
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
+	config.Producer.Return.Successes = true
+	config.Producer.Partitioner = sarama.NewHashPartitioner
+
+	producer, err := sarama.NewSyncProducer(brokers, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kafka producer: %w", err)
+	}
+
+	return &KafkaSender[K, V]{
+		producer: producer,
+		topic:    topic,
+		logger:   logger,
 	}, nil
 }
 
-func (w *RocketTelemetryWriter) WriteMessage(ctx context.Context, telemetry *RocketTelemetry) error {
-	jsonData, err := json.Marshal(telemetry)
+func (s *KafkaSender[K, V]) Send(key K, value V) error {
+	msgValue, err := json.Marshal(value)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	writeErr := w.Writer.WriteMessages(ctx,
-		kafka.Message{
-			Key:   []byte(telemetry.RocketID),
-			Value: jsonData,
-		},
-	)
-
-	if writeErr != nil {
-		return writeErr
+	msg := &sarama.ProducerMessage{
+		Topic: s.topic,
+		Key:   sarama.StringEncoder(fmt.Sprint(key)),
+		Value: sarama.ByteEncoder(msgValue),
 	}
+
+	partition, offset, err := s.producer.SendMessage(msg)
+	if err != nil {
+		return fmt.Errorf("failed to send message to Kafka: %w", err)
+	}
+
+	s.logger.Debug("message sent to Kafka",
+		"topic", s.topic,
+		"partition", partition,
+		"offset", offset,
+		"key", key)
 
 	return nil
+}
+
+func (s *KafkaSender[K, V]) Close() error {
+	return s.producer.Close()
 }
