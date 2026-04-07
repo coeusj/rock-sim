@@ -1,4 +1,4 @@
-package simulator
+package simulations
 
 type Propulsion struct {
 	Key      string  `json:"key"`
