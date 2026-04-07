@@ -61,6 +61,12 @@ func main() {
 	})
 	navSim.Start(ctx, wg)
 
+	propulsionSim := simulations.NewPropulsionSimulation(producer, simulations.Propulsion{
+		Key:      "Electron-Beta",
+		FuelPerc: 100.0,
+	})
+	propulsionSim.Start(ctx, wg)
+
 	wg.Wait()
 	log.Println("simulation completed")
 }

@@ -12,12 +12,18 @@ import (
 )
 
 type NavigationSimulation struct {
-	*Simulation[Navigation]
+	producer sarama.SyncProducer
+	key      string
+	topic    string
+	value    Navigation
 }
 
 func NewNavigationSimulation(producer sarama.SyncProducer, initialValue Navigation) *NavigationSimulation {
 	return &NavigationSimulation{
-		Simulation: NewSimulation(producer, "electron-beta-navigation", "navigation", initialValue),
+		producer: producer,
+		key:      "electron-beta-navigation",
+		topic:    "navigation",
+		value:    initialValue,
 	}
 }
 
@@ -60,15 +66,14 @@ func (ns *NavigationSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 					continue
 				}
 
-				log.Printf("Partition: %d, Offset: %d\n", partition, offset)
+				log.Printf("[Navigation] - Partition: %d, Offset: %d\n", partition, offset)
 			}
 		}
 	}()
 }
 
 func (ns *NavigationSimulation) Stop() error {
-	err := ns.producer.Close()
-	return err
+	return nil
 }
 
 func (ns *NavigationSimulation) Update() error {
