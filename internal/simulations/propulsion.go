@@ -11,13 +11,13 @@ import (
 )
 
 type PropulsionSimulation struct {
-	producer sarama.SyncProducer
+	producer sarama.AsyncProducer
 	key      string
 	topic    string
 	value    Propulsion
 }
 
-func NewPropulsionSimulation(producer sarama.SyncProducer, initialValue Propulsion) *PropulsionSimulation {
+func NewPropulsionSimulation(producer sarama.AsyncProducer, initialValue Propulsion) *PropulsionSimulation {
 	return &PropulsionSimulation{
 		producer: producer,
 		key:      "electron-beta-propulsion",
@@ -32,10 +32,10 @@ func (s *PropulsionSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 
-		ticker := time.NewTicker(time.Millisecond * 100)
+		ticker := time.NewTicker(time.Millisecond * 50)
 		defer ticker.Stop()
 
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 500; i++ {
 			select {
 			case <-ctx.Done():
 				log.Printf("simulation cancelled: %v, iterations completed: %d\n", ctx.Err(), i)
@@ -59,13 +59,17 @@ func (s *PropulsionSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 					Value: sarama.ByteEncoder(jsonMsg),
 				}
 
-				partition, offset, err := s.producer.SendMessage(msg)
-				if err != nil {
-					log.Printf("error while trying to send message to Kafka at iteration %d: %v\n", i, err)
-					continue
-				}
+				s.producer.Input() <- msg
 
-				log.Printf("[Propulsion] - Partition: %d, Offset: %d\n", partition, offset)
+				select {
+				case success := <-s.producer.Successes():
+					log.Printf("[Propulsion] - Partition: %d, Offset: %d\n", success.Partition, success.Offset)
+				case err := <-s.producer.Errors():
+					log.Printf("error while trying to send message at iteration %d: %v\n", i, err)
+				case <-ctx.Done():
+					log.Printf("simulation cancelled while trying to send message: %v, iterations completed: %d\n", ctx.Err(), i)
+					return
+				}
 			}
 		}
 	}()
@@ -77,5 +81,6 @@ func (s *PropulsionSimulation) Stop() error {
 
 func (s *PropulsionSimulation) Update() error {
 	s.value.FuelPerc -= 0.003
+	s.value.Timestamp = time.Now().UnixNano()
 	return nil
 }

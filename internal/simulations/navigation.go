@@ -12,13 +12,13 @@ import (
 )
 
 type NavigationSimulation struct {
-	producer sarama.SyncProducer
+	producer sarama.AsyncProducer
 	key      string
 	topic    string
 	value    Navigation
 }
 
-func NewNavigationSimulation(producer sarama.SyncProducer, initialValue Navigation) *NavigationSimulation {
+func NewNavigationSimulation(producer sarama.AsyncProducer, initialValue Navigation) *NavigationSimulation {
 	return &NavigationSimulation{
 		producer: producer,
 		key:      "electron-beta-navigation",
@@ -33,10 +33,10 @@ func (ns *NavigationSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 	go func() {
 		defer wg.Done()
 
-		ticker := time.NewTicker(time.Millisecond * 100)
+		ticker := time.NewTicker(time.Millisecond * 50)
 		defer ticker.Stop()
 
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 500; i++ {
 			select {
 			case <-ctx.Done():
 				log.Printf("simulation cancelled: %v, iterations completed: %d\n", ctx.Err(), i)
@@ -60,13 +60,17 @@ func (ns *NavigationSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 					Value: sarama.ByteEncoder(jsonMsg),
 				}
 
-				partition, offset, err := ns.producer.SendMessage(msg)
-				if err != nil {
-					log.Printf("error while trying to send message at iteration %d: %v\n", i, err)
-					continue
-				}
+				ns.producer.Input() <- msg
 
-				log.Printf("[Navigation] - Partition: %d, Offset: %d\n", partition, offset)
+				select {
+				case success := <-ns.producer.Successes():
+					log.Printf("[Navigation] - Partition: %d, Offset: %d\n", success.Partition, success.Offset)
+				case err := <-ns.producer.Errors():
+					log.Printf("error while trying to send message at iteration %d: %v\n", i, err)
+				case <-ctx.Done():
+					log.Printf("simulation cancelled while trying to send message: %v, iterations completed: %d\n", ctx.Err(), i)
+					return
+				}
 			}
 		}
 	}()
@@ -79,5 +83,6 @@ func (ns *NavigationSimulation) Stop() error {
 func (ns *NavigationSimulation) Update() error {
 	ns.value.Altitude += 10.3
 	ns.value.Velocity += 2.5
+	ns.value.Timestamp = time.Now().UnixNano()
 	return nil
 }

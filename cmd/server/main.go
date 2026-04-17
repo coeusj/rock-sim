@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/coeusj/rock-sim/internal/simulations"
@@ -45,25 +46,27 @@ func main() {
 	kafkaConfig.Producer.Retry.Max = 5
 	kafkaConfig.Producer.Return.Successes = true
 	kafkaConfig.Producer.Partitioner = sarama.NewHashPartitioner
-	producer, err := sarama.NewSyncProducer(brokers, kafkaConfig)
+	asyncProducer, err := sarama.NewAsyncProducer(brokers, kafkaConfig)
 	if err != nil {
 		log.Fatalf("could not create Kafka Producer: %v", err)
 	}
-	defer producer.Close()
+	defer asyncProducer.Close()
 
-	navSim := simulations.NewNavigationSimulation(producer, simulations.Navigation{
-		Key:      "Electron-Beta",
-		Velocity: 7500.2,
-		Altitude: 150000.5,
-		Pitch:    90.0,
-		Yaw:      0.0,
-		Roll:     0.0,
+	navSim := simulations.NewNavigationSimulation(asyncProducer, simulations.Navigation{
+		Key:       "Electron-Beta",
+		Velocity:  7500.2,
+		Altitude:  150000.5,
+		Pitch:     90.0,
+		Yaw:       0.0,
+		Roll:      0.0,
+		Timestamp: time.Now().UnixNano(),
 	})
 	navSim.Start(ctx, wg)
 
-	propulsionSim := simulations.NewPropulsionSimulation(producer, simulations.Propulsion{
-		Key:      "Electron-Beta",
-		FuelPerc: 100.0,
+	propulsionSim := simulations.NewPropulsionSimulation(asyncProducer, simulations.Propulsion{
+		Key:       "Electron-Beta",
+		FuelPerc:  100.0,
+		Timestamp: time.Now().UnixNano(),
 	})
 	propulsionSim.Start(ctx, wg)
 
