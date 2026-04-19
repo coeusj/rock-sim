@@ -2,25 +2,27 @@ package simulations
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
+	rocket "github.com/coeusj/rock-sim/pkg/api/rocket/v1"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PropulsionSimulation struct {
 	producer sarama.AsyncProducer
 	key      string
 	topic    string
-	value    Propulsion
+	value    *rocket.Propulsion
 }
 
-func NewPropulsionSimulation(producer sarama.AsyncProducer, initialValue Propulsion) *PropulsionSimulation {
+func NewPropulsionSimulation(producer sarama.AsyncProducer, initialValue *rocket.Propulsion) *PropulsionSimulation {
 	return &PropulsionSimulation{
 		producer: producer,
-		key:      "electron-beta-propulsion",
+		key:      initialValue.Key,
 		topic:    "propulsion",
 		value:    initialValue,
 	}
@@ -47,16 +49,16 @@ func (s *PropulsionSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 					continue
 				}
 
-				jsonMsg, err := json.Marshal(s.value)
+				protoMsg, err := proto.Marshal(s.value)
 				if err != nil {
-					log.Printf("error while trying to marshal JSON at iteration %d: %v\n", i, err)
+					log.Printf("error while trying to marshal protobuf at iteration %d: %v\n", i, err)
 					continue
 				}
 
 				msg := &sarama.ProducerMessage{
 					Topic: s.topic,
-					Key:   sarama.StringEncoder(s.key),
-					Value: sarama.ByteEncoder(jsonMsg),
+					Key:   sarama.ByteEncoder(s.key),
+					Value: sarama.ByteEncoder(protoMsg),
 				}
 
 				s.producer.Input() <- msg
@@ -81,6 +83,6 @@ func (s *PropulsionSimulation) Stop() error {
 
 func (s *PropulsionSimulation) Update() error {
 	s.value.FuelPerc -= 0.003
-	s.value.Timestamp = time.Now().UnixNano()
+	s.value.Timestamp = timestamppb.New(time.Now())
 	return nil
 }

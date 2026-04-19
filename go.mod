@@ -5,6 +5,7 @@ go 1.25.5
 require (
 	github.com/IBM/sarama v1.47.0
 	github.com/joho/godotenv v1.5.1
+	google.golang.org/protobuf v1.36.11
 )
 
 require (

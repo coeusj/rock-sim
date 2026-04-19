@@ -2,26 +2,27 @@ package simulations
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
+	navigation "github.com/coeusj/rock-sim/pkg/api/rocket/v1"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type NavigationSimulation struct {
 	producer sarama.AsyncProducer
 	key      string
 	topic    string
-	value    Navigation
+	value    *navigation.Navigation
 }
 
-func NewNavigationSimulation(producer sarama.AsyncProducer, initialValue Navigation) *NavigationSimulation {
+func NewNavigationSimulation(producer sarama.AsyncProducer, initialValue *navigation.Navigation) *NavigationSimulation {
 	return &NavigationSimulation{
 		producer: producer,
-		key:      "electron-beta-navigation",
+		key:      initialValue.Key,
 		topic:    "navigation",
 		value:    initialValue,
 	}
@@ -48,7 +49,7 @@ func (ns *NavigationSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 					continue
 				}
 
-				jsonMsg, err := json.Marshal(ns.value)
+				msgProto, err := proto.Marshal(ns.value)
 				if err != nil {
 					log.Printf("error while trying to marshal the message at iteration %d: %v\n", i, err)
 					continue
@@ -56,8 +57,8 @@ func (ns *NavigationSimulation) Start(ctx context.Context, wg *sync.WaitGroup) {
 
 				msg := &sarama.ProducerMessage{
 					Topic: ns.topic,
-					Key:   sarama.StringEncoder(fmt.Sprint(ns.key)),
-					Value: sarama.ByteEncoder(jsonMsg),
+					Key:   sarama.ByteEncoder(ns.key),
+					Value: sarama.ByteEncoder(msgProto),
 				}
 
 				ns.producer.Input() <- msg
@@ -83,6 +84,6 @@ func (ns *NavigationSimulation) Stop() error {
 func (ns *NavigationSimulation) Update() error {
 	ns.value.Altitude += 10.3
 	ns.value.Velocity += 2.5
-	ns.value.Timestamp = time.Now().UnixNano()
+	ns.value.Timestamp = timestamppb.New(time.Now())
 	return nil
 }

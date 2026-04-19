@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package rocket;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/coeusj/rock-sim/gen/rocket";
+
+message Propulsion {
+    string key = 1;
+    float fuelPerc = 2;
+    google.protobuf.Timestamp timestamp = 4;
+}

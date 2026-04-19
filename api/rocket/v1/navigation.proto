@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package rocket;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/coeusj/rock-sim/gen/rocket";
+
+message Navigation {
+    string key = 1;
+    float velocity = 2;
+    float altitude = 3;
+    float pitch = 4;
+    float yaw = 5;
+    float roll = 6;
+    google.protobuf.Timestamp timestamp = 7;
+}

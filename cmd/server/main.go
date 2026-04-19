@@ -12,8 +12,10 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/coeusj/rock-sim/internal/simulations"
+	rocket "github.com/coeusj/rock-sim/pkg/api/rocket/v1"
 	"github.com/coeusj/rock-sim/pkg/utils"
 	"github.com/joho/godotenv"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -52,21 +54,21 @@ func main() {
 	}
 	defer asyncProducer.Close()
 
-	navSim := simulations.NewNavigationSimulation(asyncProducer, simulations.Navigation{
-		Key:       "Electron-Beta",
+	navSim := simulations.NewNavigationSimulation(asyncProducer, &rocket.Navigation{
+		Key:       "electron-beta-1",
 		Velocity:  7500.2,
 		Altitude:  150000.5,
 		Pitch:     90.0,
 		Yaw:       0.0,
 		Roll:      0.0,
-		Timestamp: time.Now().UnixNano(),
+		Timestamp: timestamppb.New(time.Now()),
 	})
 	navSim.Start(ctx, wg)
 
-	propulsionSim := simulations.NewPropulsionSimulation(asyncProducer, simulations.Propulsion{
-		Key:       "Electron-Beta",
+	propulsionSim := simulations.NewPropulsionSimulation(asyncProducer, &rocket.Propulsion{
+		Key:       "electron-beta-1",
 		FuelPerc:  100.0,
-		Timestamp: time.Now().UnixNano(),
+		Timestamp: timestamppb.New(time.Now()),
 	})
 	propulsionSim.Start(ctx, wg)
 
