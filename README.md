@@ -10,3 +10,9 @@ go run ./cmd/server -env-file=<env-file-path>
 > protoc -I=api/rocket/v1 --go_out=./pkg/api/rocket/v1 --go_opt=paths=source_relative --go-grpc_out=./pkg/api/rocket/v1 --go-grpc_opt=paths=source_relative api/rocket/v1/navigation.proto
 
 > protoc -I=api/rocket/v1 --go_out=./pkg/api/rocket/v1 --go_opt=paths=source_relative --go-grpc_out=./pkg/api/rocket/v1 --go-grpc_opt=paths=source_relative api/rocket/v1/propulsion.proto
+
+> protoc -I=api/rocket/v1 --go_out=./pkg/api/rocket/v1 --go_opt=paths=source_relative --go-grpc_out=./pkg/api/rocket/v1 --go-grpc_opt=paths=source_relative api/rocket/v1/telemetry.proto
+
+# Simulation CSV file
+The telemetry csv file should be like this:
+timestamp,mission_time_s,status,altitude_m,velocity_ms,latitude,longitude,chamber_pressure_psi,battery_pct

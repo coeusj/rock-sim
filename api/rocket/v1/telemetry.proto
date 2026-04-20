@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package rocket;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/coeusj/rock-sim/gen/rocket";
+
+message Telemetry {
+    string status = 1;
+    double altitude = 2;
+    double velocity = 3;
+    double latitude = 4;
+    double longitude = 5;
+    double chamberPressurePsi = 6;
+    double batteryPerc = 7;
+    google.protobuf.Timestamp timestamp = 8;
+}

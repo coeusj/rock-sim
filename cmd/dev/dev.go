@@ -7,12 +7,15 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/coeusj/rock-sim/internal/simulations"
+	"github.com/coeusj/rock-sim/pkg/api/rocket/v1"
 	"github.com/coeusj/rock-sim/pkg/utils"
 	"github.com/joho/godotenv"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -38,6 +41,8 @@ func main() {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
 	defer stop()
 
+	wg := &sync.WaitGroup{}
+
 	kafkaConfig := sarama.NewConfig()
 	kafkaConfig.Producer.RequiredAcks = sarama.WaitForAll
 	kafkaConfig.Producer.Retry.Max = 5
@@ -49,6 +54,24 @@ func main() {
 	}
 	defer asyncProducer.Close()
 
-	sim := simulations.NewLaunchSimulation("../../rocket_telemetry_sim.csv", "rocket-sim-1", "rocket-sim", asyncProducer)
-	sim.Start(ctx, (time.Millisecond * 50))
+	navSim := simulations.NewNavigationSimulation(asyncProducer, &rocket.Navigation{
+		Key:       "electron-beta-1",
+		Velocity:  7500.2,
+		Altitude:  150000.5,
+		Pitch:     90.0,
+		Yaw:       0.0,
+		Roll:      0.0,
+		Timestamp: timestamppb.New(time.Now()),
+	})
+	navSim.Start(ctx, wg)
+
+	propulsionSim := simulations.NewPropulsionSimulation(asyncProducer, &rocket.Propulsion{
+		Key:       "electron-beta-1",
+		FuelPerc:  100.0,
+		Timestamp: timestamppb.New(time.Now()),
+	})
+	propulsionSim.Start(ctx, wg)
+
+	wg.Wait()
+	log.Println("simulation completed")
 }
