@@ -12,7 +12,10 @@ message Telemetry {
     double velocity = 3;
     double latitude = 4;
     double longitude = 5;
-    double chamberPressurePsi = 6;
-    double batteryPerc = 7;
-    google.protobuf.Timestamp timestamp = 8;
+    double pitchDeg = 6;
+    double yawDeg = 7;
+    double rollDeg = 8;
+    double chamberPressurePsi = 9;
+    double batteryPerc = 10;
+    google.protobuf.Timestamp timestamp = 11;
 }

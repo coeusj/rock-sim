@@ -69,8 +69,11 @@ func (s *LaunchSimulation) Start(ctx context.Context, loopInterval time.Duration
 			velocity, _ := strconv.ParseFloat(record[4], 64)
 			latitude, _ := strconv.ParseFloat(record[5], 64)
 			longitude, _ := strconv.ParseFloat(record[6], 64)
-			chamberPsi, _ := strconv.ParseFloat(record[7], 64)
-			batteryPerc, _ := strconv.ParseFloat(record[8], 64)
+			pitchDeg, _ := strconv.ParseFloat(record[7], 64)
+			yawDeg, _ := strconv.ParseFloat(record[8], 64)
+			rollDeg, _ := strconv.ParseFloat(record[9], 64)
+			chamberPsi, _ := strconv.ParseFloat(record[10], 64)
+			batteryPerc, _ := strconv.ParseFloat(record[11], 64)
 			timestamp, err := time.Parse(time.RFC3339, record[0])
 			if err != nil {
 				log.Fatalf("Failed to parse date: %v", err)
@@ -82,6 +85,9 @@ func (s *LaunchSimulation) Start(ctx context.Context, loopInterval time.Duration
 				Velocity:           velocity,
 				Latitude:           latitude,
 				Longitude:          longitude,
+				PitchDeg:           pitchDeg,
+				YawDeg:             yawDeg,
+				RollDeg:            rollDeg,
 				ChamberPressurePsi: chamberPsi,
 				BatteryPerc:        batteryPerc,
 				Timestamp:          timestamppb.New(timestamp),
