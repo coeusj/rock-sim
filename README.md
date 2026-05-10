@@ -1,6 +1,6 @@
 # Rocket Simulator
 
-Simple Rocket Launch Simulator
+Simple Rocket Launch Simulator that sends rocket's telemetry data on Kafka
 
 ## Run Simulation with CSV file
 
