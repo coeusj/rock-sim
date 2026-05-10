@@ -50,5 +50,5 @@ func main() {
 	defer asyncProducer.Close()
 
 	sim := simulations.NewLaunchSimulation("../../rocket_telemetry_sim.csv", "rocket-sim-1", "rocket-sim", asyncProducer)
-	sim.Start(ctx, (time.Second / 6))
+	sim.Start(ctx, (time.Second / 4))
 }
